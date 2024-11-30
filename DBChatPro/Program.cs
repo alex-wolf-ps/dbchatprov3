@@ -4,6 +4,7 @@ using DBChatPro;
 using DBChatPro.Components;
 using DBChatPro.Services;
 using Microsoft.Extensions.Azure;
+using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
 using MudBlazor;
 using MudBlazor.Services;
 using OpenAI;
@@ -20,6 +21,13 @@ builder.Services.AddRazorComponents()
 builder.Services.AddScoped<OpenAIService>();
 builder.Services.AddScoped<DatabaseService>();
 
+// Uncomment for vanilla OpenAI (non azure)
+// builder.Services.AddScoped<OpenAIClient>(factory =>
+// {
+//     return new OpenAIClient(new ApiKeyCredential("your-openai-key"));
+// });
+
+// For Azure OpenAI using Entra ID
 #region Credential chain
 // Build up credential chain for cloud and local tooling options
 var userAssignedIdentityCredential = 
@@ -54,15 +62,13 @@ if (builder.Configuration["EnvironmentMode"] == "local")
 
     var azureOpenAIEndpoint = new Uri(builder.Configuration["AZURE_OPENAI_ENDPOINT"]);
 
+    // Comment out this AddAzureClients section if you're using vanilla OpenAI instead of Azure OpenAI
     builder.Services.AddAzureClients(async clientBuilder =>
-    {
-        // Comment this out if you're using vanilla OpenAI instead of Azure OpenAI
-        clientBuilder.AddClient<AzureOpenAIClient, AzureOpenAIClientOptions>(
-            (options, _, _) => new AzureOpenAIClient(
-                azureOpenAIEndpoint, credential, options));
-
-        clientBuilder.UseCredential(credential);
-    });
+        {
+            clientBuilder.AddClient<AzureOpenAIClient, AzureOpenAIClientOptions>(
+                (options, _, _) => new AzureOpenAIClient(
+                    azureOpenAIEndpoint, credential, options)); // Replace "credential" with new ApiKeyCredential("your-key") to use key based auth with Azure
+        });
 }
 // Use Azure services in hosted mode
 else if (builder.Configuration["EnvironmentMode"] == "hosted")
@@ -77,10 +83,10 @@ else if (builder.Configuration["EnvironmentMode"] == "hosted")
         clientBuilder.AddTableServiceClient(azureTableEndpoint);
         clientBuilder.AddSecretClient(azureKeyVaultEndpoint);
 
-        // Comment this out if you're using vanilla OpenAI instead of Azure OpenAI
+        // Comment this AddClient block out if you're using vanilla OpenAI instead of Azure OpenAI
         clientBuilder.AddClient<AzureOpenAIClient, AzureOpenAIClientOptions>(
             (options, _, _) => new AzureOpenAIClient(
-                azureOpenAIEndpoint, credential, options));
+                azureOpenAIEndpoint, credential, options)); // Replace "credential" with new ApiKeyCredential("your-key") to use key based auth with Azure
 
         clientBuilder.UseCredential(credential);
     });
@@ -88,12 +94,6 @@ else if (builder.Configuration["EnvironmentMode"] == "hosted")
     builder.Services.AddScoped<IQueryService, AzureTableQueryService>();
     builder.Services.AddScoped<IConnectionService, AzureKeyVaultConnectionService>();
 }
-
-// Use this instead of the Azure OpenAI client further up if you're using vanilla OpenAI
-//builder.Services.AddScoped<OpenAIClient>(factory =>
-//{
-//    return new OpenAIClient(new ApiKeyCredential("your-key"));
-//});
 
 // Mudblazor stuff
 builder.Services.AddMudServices(config =>
