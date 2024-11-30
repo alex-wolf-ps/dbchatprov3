@@ -1,0 +1,148 @@
+﻿@page "/connect-db"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text.Json
+@using DBChatPro.Models
+@using Microsoft.Data.SqlClient
+
+@inject DatabaseService dataService
+@inject IConnectionService connectionService
+
+<div Class="ma-4">
+    <h1>Manage Database Connections</h1>
+    <MudDivider />
+    <EditForm Model="@aiConnection" OnValidSubmit="OnValidSubmit">
+        <DataAnnotationsValidator />
+        <MudGrid Class="mt-6">
+            <MudItem xs="12" md="6">
+                <h2 Class="mb-6">Add a Connection</h2>
+                <div>
+                    <p>Provide a connection string below to connect to a database and extract the schema. The schema is used by the AI to build queries for your database.</p>
+                    <MudAlert Class="my-6" Severity="Severity.Info">The AI service does NOT have access to the database or data records - it only understands the schema.</MudAlert>
+                    @if (!string.IsNullOrEmpty(Error))
+                    {
+                        <MudAlert Class="my-6" Severity="Severity.Error">An error occured: @Error</MudAlert>
+                    }
+                </div>
+                <MudCard>
+                    <MudCardContent>
+                        <MudTextField @bind-Value="aiConnection.Name" T="string" Label="Connection name" Variant="Variant.Text" />
+                        <MudTextField @bind-Value="aiConnection.ConnectionString" T="string" Label="Connection string" Variant="Variant.Text" Lines="5" />
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Check Connection</MudButton>
+                    </MudCardActions>
+                </MudCard>
+                @if (dbSchema.SchemaStructured.Count > 0)
+                {
+                    <MudCard Class="my-6">
+                        <MudCardContent>
+                            <p>
+                                The following tables and columns were discovered. Do you want to save this connection?
+                                <MudButton Style="float:right" OnClick="() => SaveConnection()" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Save</MudButton>
+                            </p>
+                            <div Class="my-6">
+                                <MudTreeView T="string">
+                                    @foreach (var table in dbSchema.SchemaStructured)
+                                    {
+                                        <MudTreeViewItem Value="@table.TableName">
+                                            @foreach (var col in table.Columns)
+                                            {
+                                                <MudTreeViewItem Value="@col" />
+                                            }
+                                        </MudTreeViewItem>
+                                    }
+                                </MudTreeView>
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                }
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <h2 Class="mb-6 ml-6">Existing Connections</h2>
+                @if (ExistingDbs.Count > 0)
+                {
+                    <MudPaper MaxWidth="100%" Class="my-6">
+
+                        <MudList Clickable="false">
+                            @foreach (var item in ExistingDbs)
+                            {
+                                <MudListItem><span>@item.Name </span><MudIconButton Style="float: right" Icon="@Icons.Material.Filled.Delete" OnClick="() => DeleteConnection(item.Name)" Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary">Delete</MudIconButton></MudListItem>
+                            }
+                        </MudList>
+                    </MudPaper>
+
+                }
+                else
+                {
+                    <p class="ma-6">No queries yet.</p>
+                }
+            </MudItem>
+        </MudGrid>
+    </EditForm>
+</div>
+@code {
+    AIConnection aiConnection = new();
+    DatabaseSchema dbSchema = new() { SchemaStructured = new List<TableSchema>(), SchemaRaw = new List<string>() };
+    List<AIConnection> ExistingDbs = new List<AIConnection>();
+
+    string Error = String.Empty;
+    bool success;
+    private bool Loading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            ExistingDbs = await connectionService.GetAIConnections();
+        }
+        catch (Exception e)
+        {
+            var test = e.Message;
+        }
+    }
+
+    private async Task OnValidSubmit(EditContext context)
+    {
+        try
+        {
+            Loading = true;
+            dbSchema = await dataService.GenerateSchema(aiConnection.ConnectionString);
+            Loading = false;
+            Error = String.Empty;
+        }
+        catch (Exception e)
+        {
+            Error = e.Message;
+        }
+    }
+
+    private async Task DeleteConnection(string name)
+    {
+        ExistingDbs = await connectionService.GetAIConnections();
+
+        var existing = ExistingDbs.FirstOrDefault(x => x.Name == name);
+
+        ExistingDbs.Remove(existing);
+
+        File.WriteAllText(@"AIConnections.txt", JsonSerializer.Serialize(ExistingDbs));
+    }
+
+    private async Task SaveConnection()
+    {
+        await connectionService.AddConnection(aiConnection);
+
+        var aiConns = new List<AIConnection>();
+        try
+        {
+            aiConns = await connectionService.GetAIConnections();
+        }
+        catch (Exception e)
+        {
+            Error = e.Message;
+        }
+
+        ExistingDbs = await connectionService.GetAIConnections();
+        Error = String.Empty;
+    }
+}

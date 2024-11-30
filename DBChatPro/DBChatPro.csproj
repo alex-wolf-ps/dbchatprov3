@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>c789d2dd-2466-40f0-a05f-7ae78f70f08e</UserSecretsId>
+  </PropertyGroup>
+
+  
+  
+  <ItemGroup>
+    <PackageReference Include="Azure.Data.Tables" Version="12.9.1" />
+    <PackageReference Include="Azure.Identity" Version="1.13.1" />
+    <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.7.0" />
+    <PackageReference Include="Markdig" Version="0.38.0" />
+    <PackageReference Include="Microsoft.Extensions.Azure" Version="1.9.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0" />
+	  <PackageReference Include="Azure.AI.OpenAI" Version="2.1.0-beta.2" />
+	  <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.5" />
+	  <PackageReference Include="MudBlazor" Version="6.*" />
+	  <PackageReference Include="OpenAI" Version="2.1.0-beta.2" />
+  </ItemGroup>
+
+</Project>
