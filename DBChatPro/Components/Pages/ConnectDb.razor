@@ -69,6 +69,10 @@
                             {
                                 <MudListItem><span>@item.Name </span><MudIconButton Style="float: right" Icon="@Icons.Material.Filled.Delete" OnClick="() => DeleteConnection(item.Name)" Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary">Delete</MudIconButton></MudListItem>
                             }
+                            @if(Deleting)
+                            {
+                                <p>Deleting... <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" /></p>
+                            }
                         </MudList>
                     </MudPaper>
 
@@ -89,6 +93,7 @@
     string Error = String.Empty;
     bool success;
     private bool Loading = false;
+    private bool Deleting = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -121,28 +126,34 @@
     {
         ExistingDbs = await connectionService.GetAIConnections();
 
-        var existing = ExistingDbs.FirstOrDefault(x => x.Name == name);
-
-        ExistingDbs.Remove(existing);
-
-        File.WriteAllText(@"AIConnections.txt", JsonSerializer.Serialize(ExistingDbs));
-    }
-
-    private async Task SaveConnection()
-    {
-        await connectionService.AddConnection(aiConnection);
-
-        var aiConns = new List<AIConnection>();
         try
-        {
-            aiConns = await connectionService.GetAIConnections();
+        { 
+            Deleting = true;
+            var task = connectionService.DeleteConnection(name);
+            Deleting = false;
+            Error = String.Empty;
+            
+            // Delete operation can take a while with some secure storage so we just update the UI manually
+            var removeEntry = ExistingDbs.FirstOrDefault(x => x.Name == name);
+            ExistingDbs.Remove(removeEntry);
         }
         catch (Exception e)
         {
             Error = e.Message;
         }
+    }
 
-        ExistingDbs = await connectionService.GetAIConnections();
-        Error = String.Empty;
+    private async Task SaveConnection()
+    {
+        try
+        {
+            await connectionService.AddConnection(aiConnection);
+            ExistingDbs = await connectionService.GetAIConnections();
+            Error = String.Empty;
+        }
+        catch (Exception e)
+        {
+            Error = e.Message;
+        }
     }
 }

@@ -58,7 +58,7 @@ param identityType string = 'None'
 param imageName string = ''
 
 @description('Specifies if Ingress is enabled for the container app')
-param ingressEnabled bool = true
+param ingressEnabled bool = false
 
 param revisionMode string = 'Single'
 

@@ -13,7 +13,12 @@ namespace DBChatPro.Services
 
         public async Task DeleteConnection(string name)
         {
-            await secretClient.StartDeleteSecretAsync(name);
+            var operation = await secretClient.StartDeleteSecretAsync(name);
+
+            // You only need to wait for completion if you want to purge or recover the key.
+            await operation.WaitForCompletionAsync();
+
+            await secretClient.PurgeDeletedSecretAsync(name);
         }
 
         public async Task<List<AIConnection>> GetAIConnections()

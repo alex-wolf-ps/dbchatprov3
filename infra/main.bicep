@@ -26,7 +26,8 @@ param openAiModelName string // Set in main.parameters.json
 param openAiModelVersion string // Set in main.parameters.json
 param openAiDeploymentCapacity int // Set in main.parameters.json
 param openAiDeploymentSkuName string // Set in main.parameters.json
-var prefix = resourceToken
+
+var prefix = 'pro${resourceToken}' // 'pro' to make sure prefix starts with a letter
 
 // Container app checks if exists
 @description('Specifies if the resource already exists')
